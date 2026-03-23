@@ -1,0 +1,56 @@
+{% extends 'user/base.html.twig' %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Event Info -->
+        <div class="col-md-7">
+            {% if event.image %}
+                <img src="/uploads/events/{{ event.image }}"
+                     class="img-fluid rounded mb-4 w-100"
+                     style="max-height: 400px; object-fit: cover;">
+            {% endif %}
+            <h1 class="fw-bold">{{ event.title }}</h1>
+            <div class="d-flex gap-3 text-muted mb-4">
+                <span><i class="bi bi-calendar me-1"></i>{{ event.date|date('d M Y, H:i') }}</span>
+                <span><i class="bi bi-geo-alt me-1"></i>{{ event.location }}</span>
+                <span><i class="bi bi-people me-1"></i>{{ event.availableSeats }} seats left</span>
+            </div>
+            <p class="lead">{{ event.description }}</p>
+        </div>
+
+        <!-- Reservation Form -->
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
+                <div class="card-body p-4">
+                    {% if event.availableSeats > 0 %}
+                        <h4 class="mb-4">Reserve Your Spot</h4>
+                        <form method="post" action="{{ path('event_reserve', {id: event.id}) }}">
+                            <div class="mb-3">
+                                <label class="form-label">Full Name *</label>
+                                <input type="text" name="name" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email *</label>
+                                <input type="email" name="email" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Phone *</label>
+                                <input type="tel" name="phone" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 py-2">
+                                <i class="bi bi-check-circle me-2"></i>Confirm Reservation
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-x-circle fs-1 text-danger"></i>
+                            <p class="mt-2">This event is fully booked.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

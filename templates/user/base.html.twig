@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EventRes{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .navbar { background: #2c3e50 !important; }
+        .hero { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 60px 0; }
+        .event-card { transition: transform 0.2s; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        .event-card:hover { transform: translateY(-4px); }
+        .badge-seats { background: #e8f5e9; color: #2e7d32; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark navbar-expand-lg">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{{ path('home') }}">
+            <i class="bi bi-calendar-event me-2"></i>EventRes
+        </a>
+        <div class="ms-auto d-flex gap-2">
+            {% if app.user %}
+                <span class="navbar-text text-light me-2">{{ app.user.email }}</span>
+            {% else %}
+                <a href="{{ path('user_login') }}" class="btn btn-outline-light btn-sm">Login</a>
+                <a href="{{ path('user_register') }}" class="btn btn-light btn-sm">Register</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="alert alert-{{ type == 'error' ? 'danger' : type }} text-center mb-0 rounded-0">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endfor %}
+
+{% block content %}{% endblock %}
+
+<footer class="bg-dark text-light text-center py-4 mt-5">
+    <small>© 2026 EventRes — ISSAT Sousse</small>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
