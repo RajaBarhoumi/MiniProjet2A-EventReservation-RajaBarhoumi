@@ -1,0 +1,60 @@
+{% extends 'user/base.html.twig' %}
+{% block title %}Upcoming Events{% endblock %}
+{% block content %}
+
+<div class="hero">
+    <div class="container text-center">
+        <h1 class="fw-bold display-5">Upcoming Events</h1>
+        <p class="lead opacity-75">Find and reserve your spot today</p>
+    </div>
+</div>
+
+<div class="container py-5">
+    {% if events is empty %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-calendar-x fs-1"></i>
+            <p class="mt-3">No upcoming events at the moment.</p>
+        </div>
+    {% else %}
+        <div class="row g-4">
+            {% for event in events %}
+            <div class="col-md-4">
+                <div class="card event-card h-100">
+                    {% if event.image %}
+                        <img src="/uploads/events/{{ event.image }}"
+                             class="card-img-top" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                        <div class="card-img-top bg-secondary d-flex align-items-center
+                                    justify-content-center" style="height: 200px;">
+                            <i class="bi bi-calendar-event text-white fs-1"></i>
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ event.title }}</h5>
+                        <p class="text-muted small">
+                            <i class="bi bi-geo-alt me-1"></i>{{ event.location }}
+                        </p>
+                        <p class="text-muted small">
+                            <i class="bi bi-calendar me-1"></i>{{ event.date|date('d M Y, H:i') }}
+                        </p>
+                        <p class="card-text text-muted small">
+                            {{ event.description|slice(0, 100) }}...
+                        </p>
+                    </div>
+                    <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                        <span class="badge badge-seats px-3 py-2">
+                            <i class="bi bi-people me-1"></i>
+                            {{ event.availableSeats }} seats left
+                        </span>
+                        <a href="{{ path('event_show', {id: event.id}) }}"
+                           class="btn btn-primary btn-sm">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends 'user/base.html.twig' %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm p-4">
+                <h3 class="text-center mb-4">Create Account</h3>
+
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control"
+                               minlength="6" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Register</button>
+                </form>
+
+                <div class="divider text-center my-3 text-muted">— or —</div>
+
+                <!-- Register Passkey after account creation -->
+                <div id="passkeySection" style="display:none">
+                    <button id="registerPasskeyBtn" class="btn btn-outline-dark w-100">
+                        <i class="bi bi-fingerprint me-2"></i>Add Passkey to Account
+                    </button>
+                </div>
+
+                <p class="text-center text-muted mt-3 small">
+                    Already have an account? <a href="{{ path('user_login') }}">Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/js/auth.js"></script>
+<script>
+document.getElementById('registerPasskeyBtn')?.addEventListener('click', async () => {
+    const email = document.querySelector('input[name="email"]').value;
+    if (!email) { alert('Enter your email first'); return; }
+    try {
+        await registerPasskey(email, email);
+        alert('Passkey registered! You can now login with it.');
+        window.location.href = '/login';
+    } catch (e) {
+        alert('Failed: ' + e.message);
+    }
+});
+</script>
+{% endblock %}

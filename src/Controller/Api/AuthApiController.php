@@ -1,0 +1,148 @@
+<?php
+namespace App\Controller\Api;
+
+use App\Service\PasskeyAuthService;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+#[Route('/api/auth')]
+class AuthApiController extends AbstractController
+{
+    public function __construct(
+        private JWTTokenManagerInterface $jwtManager,
+        private RefreshTokenManagerInterface $refreshManager
+    ) {}
+
+    #[Route('/register/options', methods: ['POST'])]
+    public function registerOptions(
+        Request $request,
+        PasskeyAuthService $passkeyService
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+        $email = $data['email'] ?? null;
+
+        if (!$email) {
+            return $this->json(['error' => 'Email required'],
+                Response::HTTP_BAD_REQUEST);
+        }
+
+        $user = $this->getDoctrine()->getRepository(\App\Entity\User::class)
+            ->findOneBy(['email' => $email]);
+
+        if (!$user) {
+            return $this->json(['error' => 'User not found'],
+                Response::HTTP_NOT_FOUND);
+        }
+
+        try {
+            return $this->json($passkeyService->getRegistrationOptions($user));
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()],
+                Response::HTTP_BAD_REQUEST);
+        }
+    }
+
+    #[Route('/register/verify', methods: ['POST'])]
+    public function registerVerify(
+        Request $request,
+        PasskeyAuthService $passkeyService
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+        $email = $data['email'] ?? null;
+        $credential = $data['credential'] ?? null;
+
+        $user = $this->getDoctrine()->getRepository(\App\Entity\User::class)
+            ->findOneBy(['email' => $email]);
+
+        if (!$user || !$credential) {
+            return $this->json(['error' => 'Invalid data'],
+                Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $passkeyService->verifyRegistration(
+                json_encode($credential), $user
+            );
+
+            $jwt = $this->jwtManager->create($user);
+            $refresh = $this->refreshManager->create();
+            $refresh->setUsername($user->getUserIdentifier());
+            $this->refreshManager->save($refresh);
+
+            return $this->json([
+                'success' => true,
+                'token' => $jwt,
+                'refresh_token' => $refresh->getRefreshToken(),
+                'user' => ['id' => $user->getId(), 'email' => $user->getEmail()]
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()],
+                Response::HTTP_BAD_REQUEST);
+        }
+    }
+
+    #[Route('/login/options', methods: ['POST'])]
+    public function loginOptions(PasskeyAuthService $passkeyService): JsonResponse
+    {
+        try {
+            return $this->json($passkeyService->getLoginOptions());
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()],
+                Response::HTTP_BAD_REQUEST);
+        }
+    }
+
+    #[Route('/login/verify', methods: ['POST'])]
+    public function loginVerify(
+        Request $request,
+        PasskeyAuthService $passkeyService
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+        $credential = $data['credential'] ?? null;
+
+        if (!$credential) {
+            return $this->json(['error' => 'Credential required'],
+                Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $user = $passkeyService->verifyLogin(json_encode($credential));
+
+            $jwt = $this->jwtManager->create($user);
+            $refresh = $this->refreshManager->create();
+            $refresh->setUsername($user->getUserIdentifier());
+            $this->refreshManager->save($refresh);
+
+            return $this->json([
+                'success' => true,
+                'token' => $jwt,
+                'refresh_token' => $refresh->getRefreshToken(),
+                'user' => ['id' => $user->getId(), 'email' => $user->getEmail()]
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()],
+                Response::HTTP_BAD_REQUEST);
+        }
+    }
+
+    #[Route('/me', methods: ['GET'])]
+    public function me(): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof \App\Entity\User) {
+            return $this->json(['error' => 'Not authenticated'],
+                Response::HTTP_UNAUTHORIZED);
+        }
+
+        return $this->json([
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'roles' => $user->getRoles()
+        ]);
+    }
+}
