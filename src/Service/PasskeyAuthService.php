@@ -2,224 +2,177 @@
 namespace App\Service;
 
 use App\Entity\User;
-use App\Repository\WebauthnCredentialRepository;
+use App\Entity\WebauthnCredential;
 use App\Repository\UserRepository;
-use Cose\Algorithm\Manager;
-use Cose\Algorithm\Signature\ECDSA\ES256;
-use Cose\Algorithm\Signature\ECDSA\ES384;
-use Cose\Algorithm\Signature\ECDSA\ES512;
-use Cose\Algorithm\Signature\RSA\RS256;
-use Webauthn\AttestationStatement\AttestationStatementSupportManager;
-use Webauthn\AttestationStatement\NoneAttestationStatementSupport;
-use Webauthn\AuthenticationExtensions\ExtensionOutputCheckerHandler;
-use Webauthn\AuthenticatorAssertionResponse;
-use Webauthn\AuthenticatorAssertionResponseValidator;
-use Webauthn\AuthenticatorAttestationResponse;
-use Webauthn\AuthenticatorAttestationResponseValidator;
-use Webauthn\PublicKeyCredential;
-use Webauthn\PublicKeyCredentialCreationOptions;
-use Webauthn\PublicKeyCredentialDescriptor;
-use Webauthn\PublicKeyCredentialParameters;
-use Webauthn\PublicKeyCredentialRequestOptions;
-use Webauthn\PublicKeyCredentialRpEntity;
-use Webauthn\PublicKeyCredentialUserEntity;
-use Webauthn\TokenBinding\IgnoreTokenBindingHandler;
+use App\Repository\WebauthnCredentialRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 class PasskeyAuthService
 {
-    private string $rpId;
-    private string $rpName;
-    private string $origin;
-
     public function __construct(
         private RequestStack $requestStack,
         private WebauthnCredentialRepository $credRepo,
-        private UserRepository $userRepo
-    ) {
-        $this->rpId   = 'localhost';
-        $this->rpName = 'EventRes';
-        $this->origin = 'http://localhost';
-    }
-
-    // ─── Registration ────────────────────────────────────────────────────────
+        private UserRepository $userRepo,
+        private EntityManagerInterface $em
+    ) {}
 
     public function getRegistrationOptions(User $user): array
     {
-        $rp = PublicKeyCredentialRpEntity::create($this->rpName, $this->rpId);
+        // Generate a random challenge
+        $challenge = base64_encode(random_bytes(32));
 
-        $userEntity = PublicKeyCredentialUserEntity::create(
-            $user->getEmail(),
-            (string) $user->getId(),
-            $user->getUsername() ?? $user->getEmail()
-        );
-
-        $challenge = random_bytes(32);
-
-        $pubKeyParams = [
-            PublicKeyCredentialParameters::create('public-key', -7),   // ES256
-            PublicKeyCredentialParameters::create('public-key', -257), // RS256
+        $options = [
+            'challenge' => $challenge,
+            'rp' => [
+                'name' => $_ENV['WEBAUTHN_RP_NAME'] ?? 'EventRes',
+                'id'   => $_ENV['APP_DOMAIN'] ?? 'localhost',
+            ],
+            'user' => [
+                'id'          => base64_encode($user->getId()->toBinary()),
+                'name'        => $user->getEmail(),
+                'displayName' => $user->getUsername(),
+            ],
+            'pubKeyCredParams' => [
+                ['alg' => -7,   'type' => 'public-key'], // ES256
+                ['alg' => -257, 'type' => 'public-key'], // RS256
+            ],
+            'authenticatorSelection' => [
+                'userVerification' => 'preferred',
+                'residentKey'      => 'preferred',
+            ],
+            'timeout'             => 60000,
+            'attestation'         => 'none',
+            'excludeCredentials'  => [],
         ];
 
-        $existingCredentials = array_map(
-            fn($cred) => PublicKeyCredentialDescriptor::create(
-                'public-key',
-                base64_decode($cred->getCredentialId())
-            ),
-            $this->credRepo->findByUser($user)
-        );
+        // Store challenge in session for verification
+        $this->requestStack->getSession()
+            ->set('webauthn_register_challenge', $challenge);
+        $this->requestStack->getSession()
+            ->set('webauthn_register_user_id', (string) $user->getId());
 
-        $options = PublicKeyCredentialCreationOptions::create(
-            $rp,
-            $userEntity,
-            $challenge,
-            $pubKeyParams
-        )
-        ->excludeCredentials(...$existingCredentials)
-        ->setTimeout(60000);
-
-        // Store in session for verify step
-        $this->requestStack->getSession()->set(
-            'webauthn_registration',
-            base64_encode(serialize($options))
-        );
-
-        return $this->serializeCreationOptions($options, $challenge);
+        return $options;
     }
 
-    public function verifyRegistration(string $responseJson, User $user): void
+    public function verifyRegistration(string $credentialJson, User $user): void
     {
-        $sessionData = $this->requestStack->getSession()->get('webauthn_registration');
-        if (!$sessionData) {
-            throw new \RuntimeException('Registration session expired. Please try again.');
+        $credential = json_decode($credentialJson, true);
+
+        if (!$credential) {
+            throw new \Exception('Invalid credential data');
         }
 
-        $options = unserialize(base64_decode($sessionData));
-        $data    = json_decode($responseJson, true);
-        $cred    = $data['credential'] ?? $data;
+        // Verify the challenge
+        $sessionChallenge = $this->requestStack->getSession()
+            ->get('webauthn_register_challenge');
 
-        // Decode the client data to verify origin & type
-        $clientDataJSON = base64_decode($this->base64urlDecode($cred['response']['clientDataJSON']));
-        $clientData     = json_decode($clientDataJSON, true);
-
-        if ($clientData['type'] !== 'webauthn.create') {
-            throw new \RuntimeException('Invalid type in clientDataJSON');
-        }
-        if ($clientData['origin'] !== $this->origin) {
-            throw new \RuntimeException('Origin mismatch: ' . $clientData['origin']);
+        if (!$sessionChallenge) {
+            throw new \Exception('No challenge found in session');
         }
 
-        // Save the credential
-        $credentialId = $cred['rawId'];
-        $publicKey    = $cred['response']['attestationObject']; // store raw for now
+        // Decode clientDataJSON to verify challenge
+        $clientDataJSON = $credential['response']['clientDataJSON'] ?? null;
+        if (!$clientDataJSON) {
+            throw new \Exception('Missing clientDataJSON');
+        }
 
-        $this->credRepo->saveCredential($user, $credentialId, $publicKey);
+        $clientData = json_decode(
+            base64_decode(strtr($clientDataJSON, '-_', '+/')),
+            true
+        );
 
-        $this->requestStack->getSession()->remove('webauthn_registration');
+        // Verify challenge matches
+        $receivedChallenge = $clientData['challenge'] ?? null;
+        $expectedChallenge = strtr(
+            base64_encode(base64_decode($sessionChallenge)),
+            '+/', '-_'
+        );
+        $expectedChallenge = rtrim($expectedChallenge, '=');
+
+        if ($receivedChallenge !== $expectedChallenge) {
+            throw new \Exception('Challenge mismatch');
+        }
+
+        // Store credential in database
+        $webauthnCred = new WebauthnCredential();
+        $webauthnCred->setUser($user);
+        $webauthnCred->setName('Passkey - ' . date('d/m/Y'));
+        $webauthnCred->setRawCredentialData(json_encode($credential));
+
+        $this->em->persist($webauthnCred);
+        $this->em->flush();
+
+        // Clean session
+        $this->requestStack->getSession()->remove('webauthn_register_challenge');
+        $this->requestStack->getSession()->remove('webauthn_register_user_id');
     }
-
-    // ─── Login ───────────────────────────────────────────────────────────────
 
     public function getLoginOptions(): array
     {
-        $challenge = random_bytes(32);
+        $challenge = base64_encode(random_bytes(32));
 
-        $options = PublicKeyCredentialRequestOptions::create($challenge)
-            ->setRpId($this->rpId)
-            ->setTimeout(60000)
-            ->setUserVerification(
-                PublicKeyCredentialRequestOptions::USER_VERIFICATION_REQUIREMENT_PREFERRED
-            );
-
-        $this->requestStack->getSession()->set(
-            'webauthn_login',
-            base64_encode(serialize(['challenge' => base64_encode($challenge)]))
-        );
+        $this->requestStack->getSession()
+            ->set('webauthn_login_challenge', $challenge);
 
         return [
-            'challenge'        => $this->base64urlEncode($challenge),
+            'challenge'        => $challenge,
             'timeout'          => 60000,
-            'rpId'             => $this->rpId,
+            'rpId'             => $_ENV['APP_DOMAIN'] ?? 'localhost',
             'userVerification' => 'preferred',
             'allowCredentials' => [],
         ];
     }
 
-    public function verifyLogin(string $responseJson): User
+    public function verifyLogin(string $credentialJson): User
     {
-        $sessionData = $this->requestStack->getSession()->get('webauthn_login');
-        if (!$sessionData) {
-            throw new \RuntimeException('Login session expired. Please try again.');
+        $credential = json_decode($credentialJson, true);
+
+        if (!$credential) {
+            throw new \Exception('Invalid credential data');
         }
 
-        $session = unserialize(base64_decode($sessionData));
-        $data    = json_decode($responseJson, true);
-        $cred    = $data['credential'] ?? $data;
+        $sessionChallenge = $this->requestStack->getSession()
+            ->get('webauthn_login_challenge');
 
-        // Verify clientDataJSON
-        $clientDataJSON = base64_decode($this->base64urlDecode($cred['response']['clientDataJSON']));
-        $clientData     = json_decode($clientDataJSON, true);
-
-        if ($clientData['type'] !== 'webauthn.get') {
-            throw new \RuntimeException('Invalid type');
-        }
-        if ($clientData['origin'] !== $this->origin) {
-            throw new \RuntimeException('Origin mismatch');
+        if (!$sessionChallenge) {
+            throw new \Exception('No challenge in session');
         }
 
-        $challengeFromClient = $this->base64urlDecode($clientData['challenge']);
-        if ($challengeFromClient !== $session['challenge']) {
-            throw new \RuntimeException('Challenge mismatch');
+        // Decode and verify challenge
+        $clientDataJSON = $credential['response']['clientDataJSON'] ?? null;
+        if (!$clientDataJSON) {
+            throw new \Exception('Missing clientDataJSON');
+        }
+
+        $clientData = json_decode(
+            base64_decode(strtr($clientDataJSON, '-_', '+/')),
+            true
+        );
+
+        $receivedChallenge = $clientData['challenge'] ?? null;
+        $expectedChallenge = rtrim(
+            strtr(base64_encode(base64_decode($sessionChallenge)), '+/', '-_'),
+            '='
+        );
+
+        if ($receivedChallenge !== $expectedChallenge) {
+            throw new \Exception('Challenge mismatch during login');
         }
 
         // Find credential by ID
-        $credentialId = $cred['rawId'];
-        $entity       = $this->credRepo->findByCredentialId($credentialId);
+        $credentialId = $credential['id'] ?? null;
+        $webauthnCred = $this->credRepo->findByCredentialId($credentialId);
 
-        if (!$entity) {
-            throw new \RuntimeException('Passkey not recognized');
+        if (!$webauthnCred) {
+            throw new \Exception('Passkey not found. Please register first.');
         }
 
-        $this->requestStack->getSession()->remove('webauthn_login');
+        $webauthnCred->touch();
+        $this->em->flush();
 
-        return $entity->getUser();
-    }
+        $this->requestStack->getSession()->remove('webauthn_login_challenge');
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
-
-    private function base64urlEncode(string $data): string
-    {
-        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
-    }
-
-    private function base64urlDecode(string $data): string
-    {
-        return base64_decode(strtr($data, '-_', '+/') . str_repeat('=', (4 - strlen($data) % 4) % 4));
-    }
-
-    private function serializeCreationOptions(
-        PublicKeyCredentialCreationOptions $options,
-        string $rawChallenge
-    ): array {
-        return [
-            'challenge' => $this->base64urlEncode($rawChallenge),
-            'rp'        => ['name' => $this->rpName, 'id' => $this->rpId],
-            'user'      => [
-                'id'          => $this->base64urlEncode($options->user->id),
-                'name'        => $options->user->name,
-                'displayName' => $options->user->displayName,
-            ],
-            'pubKeyCredParams'        => [
-                ['type' => 'public-key', 'alg' => -7],
-                ['type' => 'public-key', 'alg' => -257],
-            ],
-            'timeout'                 => 60000,
-            'excludeCredentials'      => [],
-            'authenticatorSelection'  => [
-                'userVerification'   => 'preferred',
-                'residentKey'        => 'preferred',
-            ],
-            'attestation' => 'none',
-        ];
+        return $webauthnCred->getUser();
     }
 }

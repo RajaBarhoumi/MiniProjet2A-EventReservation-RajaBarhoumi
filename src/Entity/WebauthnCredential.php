@@ -4,7 +4,6 @@ namespace App\Entity;
 use App\Repository\WebauthnCredentialRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
-use Webauthn\PublicKeyCredentialSource;
 
 #[ORM\Entity(repositoryClass: WebauthnCredentialRepository::class)]
 #[ORM\Table(name: 'webauthn_credential')]
@@ -19,7 +18,7 @@ class WebauthnCredential
     private User $user;
 
     #[ORM\Column(type: 'text')]
-    private string $credentialData;
+    private string $rawCredentialData;
 
     #[ORM\Column(length: 255)]
     private string $name;
@@ -32,10 +31,10 @@ class WebauthnCredential
 
     public function __construct()
     {
-        $this->id = Uuid::v4();
-        $this->createdAt = new \DateTimeImmutable();
-        $this->lastUsedAt = new \DateTimeImmutable();
-        $this->name = 'My Passkey';
+        $this->id          = Uuid::v4();
+        $this->createdAt   = new \DateTimeImmutable();
+        $this->lastUsedAt  = new \DateTimeImmutable();
+        $this->name        = 'My Passkey';
     }
 
     public function getId(): Uuid { return $this->id; }
@@ -54,16 +53,21 @@ class WebauthnCredential
         return $this;
     }
 
-    public function getCredentialSource(): PublicKeyCredentialSource
+    public function getRawCredentialData(): string
     {
-        return PublicKeyCredentialSource::createFromArray(
-            json_decode($this->credentialData, true)
-        );
+        return $this->rawCredentialData;
+    }
+    public function setRawCredentialData(string $data): static
+    {
+        $this->rawCredentialData = $data;
+        return $this;
     }
 
-    public function setCredentialSource(PublicKeyCredentialSource $source): void
+    // Get the credential ID from stored data
+    public function getCredentialId(): string
     {
-        $this->credentialData = json_encode($source);
+        $data = json_decode($this->rawCredentialData, true);
+        return $data['id'] ?? '';
     }
 
     public function touch(): void
