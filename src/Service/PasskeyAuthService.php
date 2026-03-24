@@ -39,7 +39,7 @@ class PasskeyAuthService
     ) {
         $this->rpId   = 'localhost';
         $this->rpName = 'EventRes';
-        $this->origin = 'http://localhost:8080';
+        $this->origin = 'http://localhost';
     }
 
     // ─── Registration ────────────────────────────────────────────────────────
