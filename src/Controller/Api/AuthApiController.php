@@ -25,26 +25,34 @@ class AuthApiController extends AbstractController
         Request $request,
         PasskeyAuthService $passkeyService
     ): JsonResponse {
-        $data = json_decode($request->getContent(), true);
+        $content = $request->getContent();
+        
+        if (empty($content)) {
+            return $this->json(['error' => 'Request body is empty'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $data = json_decode($content, true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON provided'], Response::HTTP_BAD_REQUEST);
+        }
+
         $email = $data['email'] ?? null;
 
         if (!$email) {
-            return $this->json(['error' => 'Email required'],
-                Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Email required'], Response::HTTP_BAD_REQUEST);
         }
 
-        $user =$this->userRepo->findOneBy(['email' => $email]);
+        $user = $this->userRepo->findOneBy(['email' => $email]);
 
         if (!$user) {
-            return $this->json(['error' => 'User not found'],
-                Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
 
         try {
-            return $this->json($passkeyService->getRegistrationOptions($user));
+            $options = $passkeyService->getRegistrationOptions($user);
+            return $this->json($options);
         } catch (\Exception $e) {
-            return $this->json(['error' => $e->getMessage()],
-                Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
     }
 
