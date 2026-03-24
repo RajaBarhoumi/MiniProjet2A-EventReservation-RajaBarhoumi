@@ -17,11 +17,20 @@ security:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
+        # Passkey + JWT API endpoints — fully public
         auth_api:
-            pattern: ^/api/auth/(register|login)
-            stateless: false
+            pattern: ^/api/auth
+            stateless: true
             security: false
 
+        # Protected API — requires JWT
+        api:
+            pattern: ^/api
+            stateless: true
+            provider: app_user_provider
+            jwt: ~
+
+        # Admin firewall
         admin:
             pattern: ^/admin
             stateless: false
@@ -30,11 +39,14 @@ security:
                 login_path: admin_login
                 check_path: admin_login
                 default_target_path: admin_dashboard
+                username_parameter: _username
+                password_parameter: _password
             logout:
                 path: admin_logout
                 target: admin_login
-       
-        user:
+
+        # User firewall — covers everything else
+        main:
             pattern: ^/
             stateless: false
             provider: app_user_provider
@@ -42,21 +54,33 @@ security:
                 login_path: user_login
                 check_path: user_login
                 default_target_path: home
+                username_parameter: _username
+                password_parameter: _password
             logout:
                 path: user_logout
                 target: home
-
-        api:
-            pattern: ^/api
-            stateless: true
-            provider: app_user_provider
-            jwt: ~
-
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: 604800
 
     access_control:
-        - { path: ^/api/auth/(register|login), roles: PUBLIC_ACCESS }
+        # Public API auth routes
+        - { path: ^/api/auth, roles: PUBLIC_ACCESS }
         - { path: ^/api/token/refresh, roles: PUBLIC_ACCESS }
+
+        # Protected API
+        - { path: ^/api, roles: ROLE_USER }
+
+        # Admin routes
         - { path: ^/admin/login, roles: PUBLIC_ACCESS }
         - { path: ^/admin, roles: ROLE_ADMIN }
-        - { path: ^/api, roles: ROLE_USER }
+
+        # User auth pages — public
+        - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/register, roles: PUBLIC_ACCESS }
+
+        # Profile — must be logged in
+        - { path: ^/profile, roles: ROLE_USER }
+
+        # Everything else — public
         - { path: ^/, roles: PUBLIC_ACCESS }
