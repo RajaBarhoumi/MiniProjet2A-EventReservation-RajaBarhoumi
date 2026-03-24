@@ -1,5 +1,6 @@
 {% extends 'user/base.html.twig' %}
 {% block title %}Login{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -8,10 +9,11 @@
                 <h3 class="text-center mb-4">Login</h3>
 
                 {% if error %}
-                    <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+                    <div class="alert alert-danger">
+                        {{ error.messageKey|trans(error.messageData, 'security') }}
+                    </div>
                 {% endif %}
 
-                <!-- Password Login -->
                 <form method="post" action="{{ path('user_login') }}">
                     <div class="mb-3">
                         <label class="form-label">Email</label>
@@ -22,13 +24,13 @@
                         <label class="form-label">Password</label>
                         <input type="password" name="_password" class="form-control" required>
                     </div>
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+                    <input type="hidden" name="_csrf_token"
+                           value="{{ csrf_token('authenticate') }}">
                     <button type="submit" class="btn btn-primary w-100">Login</button>
                 </form>
 
-                <div class="divider text-center my-3 text-muted">— or —</div>
+                <div class="text-center my-3 text-muted">— or —</div>
 
-                <!-- Passkey Login -->
                 <button id="passkeyLoginBtn" class="btn btn-outline-dark w-100">
                     <i class="bi bi-fingerprint me-2"></i>Login with Passkey
                 </button>
@@ -41,18 +43,35 @@
     </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
+{# Load auth.js FIRST before any inline script #}
 <script src="/js/auth.js"></script>
 <script>
-document.getElementById('passkeyLoginBtn').addEventListener('click', async () => {
-    try {
-        const result = await loginWithPasskey();
-        if (result.token) {
-            window.location.href = '/';
+    document.addEventListener('DOMContentLoaded', function () {
+        const btn = document.getElementById('passkeyLoginBtn');
+
+        // Check if browser supports WebAuthn
+        if (!window.PublicKeyCredential) {
+            btn.disabled = true;
+            btn.textContent = 'Passkey not supported in this browser';
+            return;
         }
-    } catch (e) {
-        alert('Passkey login failed: ' + e.message);
-    }
-});
+
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Authenticating...';
+            try {
+                const result = await loginWithPasskey();
+                if (result.token) {
+                    window.location.href = '/';
+                }
+            } catch (e) {
+                alert('Passkey login failed: ' + e.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-fingerprint me-2"></i>Login with Passkey';
+            }
+        });
+    });
 </script>
 {% endblock %}
