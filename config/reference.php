@@ -1419,7 +1419,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         html_to_text_converter?: scalar|Param|null, // A service implementing the "Symfony\Component\Mime\HtmlToTextConverter\HtmlToTextConverterInterface". // Default: null
  *     },
  * }
-
  * @psalm-type GesdinetJwtRefreshTokenConfig = array{
  *     ttl?: int|Param, // The default TTL for all authenticators. // Default: 2592000
  *     ttl_update?: bool|Param, // The default update TTL flag for all authenticators. // Default: false
@@ -1441,7 +1440,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     return_expiration?: scalar|Param|null, // When true, the response will include the token expiration timestamp // Default: false
  *     return_expiration_parameter_name?: scalar|Param|null, // The default response parameter name containing the refresh token expiration timestamp // Default: "refresh_token_expiration"
  *     default_invalid_batch_size?: int|Param, // The default batch size when clearing invalid tokens // Default: 1000
-
+ * }
  * @psalm-type TwigExtraConfig = array{
  *     cache?: bool|array{
  *         enabled?: bool|Param, // Default: false
@@ -1488,7 +1487,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         },
  *         ...<mixed>
  *     },
-
  * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,
@@ -1501,11 +1499,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     nelmio_cors?: NelmioCorsConfig,
  *     lexik_jwt_authentication?: LexikJwtAuthenticationConfig,
  *     twig?: TwigConfig,
-
  *     gesdinet_jwt_refresh_token?: GesdinetJwtRefreshTokenConfig,
-
  *     twig_extra?: TwigExtraConfig,
-
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -1518,11 +1513,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         nelmio_cors?: NelmioCorsConfig,
  *         lexik_jwt_authentication?: LexikJwtAuthenticationConfig,
  *         twig?: TwigConfig,
-
  *         gesdinet_jwt_refresh_token?: GesdinetJwtRefreshTokenConfig,
-
  *         twig_extra?: TwigExtraConfig,
-
  *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
@@ -1535,11 +1527,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         nelmio_cors?: NelmioCorsConfig,
  *         lexik_jwt_authentication?: LexikJwtAuthenticationConfig,
  *         twig?: TwigConfig,
-
  *         gesdinet_jwt_refresh_token?: GesdinetJwtRefreshTokenConfig,
-
  *         twig_extra?: TwigExtraConfig,
-
  *     },
  *     "when@test"?: array{
  *         imports?: ImportsConfig,
@@ -1552,11 +1541,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         nelmio_cors?: NelmioCorsConfig,
  *         lexik_jwt_authentication?: LexikJwtAuthenticationConfig,
  *         twig?: TwigConfig,
-
  *         gesdinet_jwt_refresh_token?: GesdinetJwtRefreshTokenConfig,
-
  *         twig_extra?: TwigExtraConfig,
-
  *     },
  *     ...<string, ExtensionType|array{ // extra keys must follow the when@%env% pattern or match an extension alias
  *         imports?: ImportsConfig,
