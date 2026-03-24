@@ -20,12 +20,23 @@
         <a class="navbar-brand fw-bold" href="{{ path('home') }}">
             <i class="bi bi-calendar-event me-2"></i>EventRes
         </a>
-        <div class="ms-auto d-flex gap-2">
+        <div class="ms-auto d-flex align-items-center gap-2">
             {% if app.user %}
-                <span class="navbar-text text-light me-2">{{ app.user.email }}</span>
+                <a href="{{ path('user_profile') }}"
+                   class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-person me-1"></i>{{ app.user.username }}
+                </a>
+                <a href="{{ path('user_logout') }}"
+                   class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-box-arrow-right me-1"></i>Logout
+                </a>
             {% else %}
-                <a href="{{ path('user_login') }}" class="btn btn-outline-light btn-sm">Login</a>
-                <a href="{{ path('user_register') }}" class="btn btn-light btn-sm">Register</a>
+                <a href="{{ path('user_login') }}" class="btn btn-outline-light btn-sm">
+                    Login
+                </a>
+                <a href="{{ path('user_register') }}" class="btn btn-light btn-sm">
+                    Register
+                </a>
             {% endif %}
         </div>
     </div>
