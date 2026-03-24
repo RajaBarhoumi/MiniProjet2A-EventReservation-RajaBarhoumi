@@ -65,26 +65,22 @@ class AuthApiController extends AbstractController
         $data = json_decode($content, true);
 
         if (!is_array($data)) {
-            return $this->json(['error' => 'Invalid JSON payload'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Invalid or empty JSON'], Response::HTTP_BAD_REQUEST);
         }
 
         $email = $data['email'] ?? null;
         $credential = $data['credential'] ?? null;
 
-        if (!$email || !$credential) {
-            return $this->json(['error' => 'Missing email or credential data'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $user = $this->userRepo->findOneBy(['email' => $email]);
-
-        if (!$user) {
+        if (!$user = $this->userRepo->findOneBy(['email' => $email])) {
             return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
 
+        if (!$credential) {
+            return $this->json(['error' => 'Credential data missing'], Response::HTTP_BAD_REQUEST);
+        }
+
         try {
-            $passkeyService->verifyRegistration(
-                json_encode($credential), $user
-            );
+            $passkeyService->verifyRegistration(json_encode($credential), $user);
 
             $jwt = $this->jwtManager->create($user);
             $refresh = $this->refreshManager->create();
