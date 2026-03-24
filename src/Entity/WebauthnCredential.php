@@ -35,6 +35,7 @@ class WebauthnCredential
         $this->id = Uuid::v4();
         $this->createdAt = new \DateTimeImmutable();
         $this->lastUsedAt = new \DateTimeImmutable();
+        $this->name = 'My Passkey';
     }
 
     public function getId(): Uuid { return $this->id; }
