@@ -19,7 +19,7 @@ security:
 
         auth_api:
             pattern: ^/api/auth/(register|login)
-            stateless: true
+            stateless: false
             security: false
 
         admin:

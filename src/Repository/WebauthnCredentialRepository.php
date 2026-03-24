@@ -14,25 +14,25 @@ class WebauthnCredentialRepository extends ServiceEntityRepository
         parent::__construct($registry, WebauthnCredential::class);
     }
 
-    public function saveCredential(User $user, PublicKeyCredentialSource $source, string $name = 'My Passkey'): WebauthnCredential
+    public function saveCredential(User $user, string $credentialId, string $publicKey): void
     {
-        $credential = new WebauthnCredential();
-        $credential->setUser($user);
-        $credential->setName($name);
-        $credential->setCredentialSource($source);
+        $cred = new WebauthnCredential();
+        $cred->setUser($user);
+        $cred->setCredentialId($credentialId);
+        $cred->setPublicKey($publicKey);
+        $cred->setCreatedAt(new \DateTimeImmutable());
 
-        $this->getEntityManager()->persist($credential);
-        $this->getEntityManager()->flush();
-
-        return $credential;
+        $this->_em->persist($cred);
+        $this->_em->flush();
     }
 
     public function findByCredentialId(string $credentialId): ?WebauthnCredential
     {
-        return $this->createQueryBuilder('c')
-            ->where('c.credentialData LIKE :credId')
-            ->setParameter('credId', '%' . base64_encode($credentialId) . '%')
-            ->getQuery()
-            ->getOneOrNullResult();
+        return $this->findOneBy(['credentialId' => $credentialId]);
+    }
+
+    public function findByUser(User $user): array
+    {
+        return $this->findBy(['user' => $user]);
     }
 }

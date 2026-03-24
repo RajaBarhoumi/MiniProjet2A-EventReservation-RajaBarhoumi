@@ -15,7 +15,8 @@ class AuthApiController extends AbstractController
 {
     public function __construct(
         private JWTTokenManagerInterface $jwtManager,
-        private RefreshTokenManagerInterface $refreshManager
+        private RefreshTokenManagerInterface $refreshManager,
+        private UserRepository $userRepo
     ) {}
 
     #[Route('/register/options', methods: ['POST'])]
@@ -31,8 +32,7 @@ class AuthApiController extends AbstractController
                 Response::HTTP_BAD_REQUEST);
         }
 
-        $user = $this->getDoctrine()->getRepository(\App\Entity\User::class)
-            ->findOneBy(['email' => $email]);
+        $user =$this->userRepo->findOneBy(['email' => $email]);
 
         if (!$user) {
             return $this->json(['error' => 'User not found'],
@@ -56,8 +56,7 @@ class AuthApiController extends AbstractController
         $email = $data['email'] ?? null;
         $credential = $data['credential'] ?? null;
 
-        $user = $this->getDoctrine()->getRepository(\App\Entity\User::class)
-            ->findOneBy(['email' => $email]);
+        $user = $this->userRepo->findOneBy(['email' => $email]);
 
         if (!$user || !$credential) {
             return $this->json(['error' => 'Invalid data'],
