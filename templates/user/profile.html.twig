@@ -1,0 +1,110 @@
+{% extends 'user/base.html.twig' %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <!-- Profile Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex
+                                    align-items-center justify-content-center me-3"
+                             style="width: 60px; height: 60px;">
+                            <i class="bi bi-person text-primary fs-3"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-0">{{ app.user.username }}</h4>
+                            <small class="text-muted">{{ app.user.email }}</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <a href="{{ path('home') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Events
+                        </a>
+                        <a href="{{ path('user_logout') }}" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-box-arrow-right me-1"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Passkey Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="mb-1">
+                        <i class="bi bi-fingerprint me-2 text-primary"></i>Passkey
+                    </h5>
+                    <p class="text-muted small mb-4">
+                        Add a passkey to your account so you can login
+                        using your fingerprint, Face ID, or device PIN
+                        — no password needed.
+                    </p>
+
+                    <div id="statusMsg"></div>
+
+                    <button id="addPasskeyBtn" class="btn btn-dark w-100">
+                        <i class="bi bi-fingerprint me-2"></i>Add Passkey to My Account
+                    </button>
+
+                    <div class="mt-3 p-3 bg-light rounded small text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Your passkey is stored on this device only.
+                        You can add passkeys on multiple devices.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/auth.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('addPasskeyBtn');
+    const statusMsg = document.getElementById('statusMsg');
+
+    // Check browser support
+    if (!window.PublicKeyCredential) {
+        btn.disabled = true;
+        btn.textContent = 'Passkeys not supported in this browser';
+        return;
+    }
+
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Setting up passkey...';
+        statusMsg.innerHTML = '';
+
+        try {
+            const email = '{{ app.user.email }}';
+            const username = '{{ app.user.username }}';
+            const result = await registerPasskey(email, username);
+
+            statusMsg.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Passkey added successfully! You can now login with it.
+                </div>`;
+
+            btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>Passkey Added';
+
+        } catch (e) {
+            statusMsg.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Failed: ${e.message}
+                </div>`;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-fingerprint me-2"></i>Try Again';
+        }
+    });
+});
+</script>
+{% endblock %}
