@@ -1,6 +1,7 @@
 <?php
 namespace App\Controller\Api;
 
+use App\Repository\UserRepository;
 use App\Service\PasskeyAuthService;
 use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
