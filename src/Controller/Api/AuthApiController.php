@@ -61,15 +61,24 @@ class AuthApiController extends AbstractController
         Request $request,
         PasskeyAuthService $passkeyService
     ): JsonResponse {
-        $data = json_decode($request->getContent(), true);
+        $content = $request->getContent();
+        $data = json_decode($content, true);
+
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid JSON payload'], Response::HTTP_BAD_REQUEST);
+        }
+
         $email = $data['email'] ?? null;
         $credential = $data['credential'] ?? null;
 
+        if (!$email || !$credential) {
+            return $this->json(['error' => 'Missing email or credential data'], Response::HTTP_BAD_REQUEST);
+        }
+
         $user = $this->userRepo->findOneBy(['email' => $email]);
 
-        if (!$user || !$credential) {
-            return $this->json(['error' => 'Invalid data'],
-                Response::HTTP_BAD_REQUEST);
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
 
         try {
@@ -89,8 +98,7 @@ class AuthApiController extends AbstractController
                 'user' => ['id' => $user->getId(), 'email' => $user->getEmail()]
             ]);
         } catch (\Exception $e) {
-            return $this->json(['error' => $e->getMessage()],
-                Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
     }
 
