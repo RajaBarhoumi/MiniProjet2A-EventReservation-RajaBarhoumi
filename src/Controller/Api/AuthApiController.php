@@ -128,7 +128,9 @@ class AuthApiController extends AbstractController
 
             $jwt = $this->jwtManager->create($user);
             $refresh = $this->refreshManager->create();
+            $refresh->setRefreshToken(); 
             $refresh->setUsername($user->getUserIdentifier());
+            $refresh->setValid((new \DateTime())->modify('+2592000 seconds'));
             $this->refreshManager->save($refresh);
 
             return $this->json([
