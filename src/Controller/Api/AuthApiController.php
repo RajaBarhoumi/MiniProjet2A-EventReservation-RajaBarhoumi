@@ -80,8 +80,7 @@ class AuthApiController extends AbstractController
         }
 
         try {
-            $passkeyService->verifyRegistration(json_encode($credential), $user);
-
+            $passkeyService->verifyRegistration($credential, $user);
             $jwt = $this->jwtManager->create($user);
             $refresh = $this->refreshManager->create();
             $refresh->setUsername($user->getUserIdentifier());
