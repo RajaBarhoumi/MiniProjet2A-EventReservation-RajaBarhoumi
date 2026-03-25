@@ -43,6 +43,7 @@ security:
                 check_path: /api/token/refresh
 
     access_control:
+        - { path: ^/passkey-session, roles: PUBLIC_ACCESS } 
         - { path: ^/api/auth/(register|login), roles: PUBLIC_ACCESS }
         - { path: ^/api/token/refresh, roles: PUBLIC_ACCESS }
         - { path: ^/admin/login, roles: PUBLIC_ACCESS }

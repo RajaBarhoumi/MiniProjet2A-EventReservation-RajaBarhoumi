@@ -50,4 +50,34 @@ class UserAuthController extends AbstractController
 
         return $this->render('user/auth/register.html.twig');
     }
+
+    #[Route('/passkey-session', name: 'passkey_session', methods: ['POST'])]
+    public function passkeySession(
+        Request $request,
+        UserRepository $userRepo,
+        \Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface $jwtManager,
+        \Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface $tokenStorage,
+        \Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken $token = null
+    ): Response {
+        $data = json_decode($request->getContent(), true);
+        $email = $data['email'] ?? null;
+
+        if (!$email) {
+            return $this->json(['error' => 'Missing email'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $user = $userRepo->findOneBy(['email' => $email]);
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Manually create Symfony session for this user
+        $token = new \Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken(
+            $user, 'main', $user->getRoles()
+        );
+        $tokenStorage->setToken($token);
+        $request->getSession()->set('_security_main', serialize($token));
+
+        return $this->json(['success' => true]);
+    }
 }

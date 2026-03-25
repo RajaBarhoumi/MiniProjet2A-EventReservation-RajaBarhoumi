@@ -45,33 +45,43 @@
 {% endblock %}
 
 {% block scripts %}
-{# Load auth.js FIRST before any inline script #}
 <script src="/js/auth.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const btn = document.getElementById('passkeyLoginBtn');
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('passkeyLoginBtn');
 
-        // Check if browser supports WebAuthn
-        if (!window.PublicKeyCredential) {
-            btn.disabled = true;
-            btn.textContent = 'Passkey not supported in this browser';
-            return;
-        }
+    if (!window.PublicKeyCredential) {
+        btn.disabled = true;
+        btn.textContent = 'Passkey not supported in this browser';
+        return;
+    }
 
-        btn.addEventListener('click', async () => {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Authenticating...';
-            try {
-                const result = await loginWithPasskey();
-                if (result.token) {
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Authenticating...';
+        try {
+            const result = await loginWithPasskey();
+
+            if (result.token && result.user) {
+                // Create a real Symfony session using the verified user
+                const sessionRes = await fetch('/passkey-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: result.user.email })
+                });
+
+                if (sessionRes.ok) {
                     window.location.href = '/';
+                } else {
+                    throw new Error('Session creation failed');
                 }
-            } catch (e) {
-                alert('Passkey login failed: ' + e.message);
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-fingerprint me-2"></i>Login with Passkey';
             }
-        });
+        } catch (e) {
+            alert('Passkey login failed: ' + e.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-fingerprint me-2"></i>Login with Passkey';
+        }
     });
+});
 </script>
 {% endblock %}
