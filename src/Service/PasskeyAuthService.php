@@ -71,7 +71,7 @@ class PasskeyAuthService
         }
 
         // Decode clientDataJSON to verify challenge
-        $clientDataJSON = $credential['response']['clientDataJSON'] ?? null;
+        $clientDataJSON = $credentialJson['response']['clientDataJSON'] ?? null;
         if (!$clientDataJSON) {
             throw new \Exception('Missing clientDataJSON');
         }
@@ -97,7 +97,7 @@ class PasskeyAuthService
         $webauthnCred = new WebauthnCredential();
         $webauthnCred->setUser($user);
         $webauthnCred->setName('Passkey - ' . date('d/m/Y'));
-        $webauthnCred->setRawCredentialData(json_encode($credential));
+        $webauthnCred->setRawCredentialData(json_encode($credentialJson));
 
         $this->em->persist($webauthnCred);
         $this->em->flush();
