@@ -9,13 +9,9 @@ use Gesdinet\JWTRefreshTokenBundle\Entity\RefreshToken as BaseRefreshToken;
 #[ORM\Table(name: 'refresh_tokens')]
 class RefreshToken extends BaseRefreshToken
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'integer')]
-    protected string|int|null $id = null;        
 
-    public function getId(): ?int
+    public function getId(): string|int|null
     {
-        return $this->id;
+        return parent::getId();  
     }
 }
