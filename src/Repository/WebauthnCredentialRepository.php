@@ -15,12 +15,11 @@ class WebauthnCredentialRepository extends ServiceEntityRepository
 
     public function findByCredentialId(string $credentialId): ?WebauthnCredential
     {
-        $all = $this->findAll();
-        foreach ($all as $credential) {
-            if ($credential->getCredentialId() === $credentialId) {
-                return $credential;
-            }
-        }
-        return null;
+        return $this->createQueryBuilder('w')
+        ->andWhere('w.rawCredentialData LIKE :id')
+        ->setParameter('id', '%"id":"' . $credentialId . '"%')
+        ->setMaxResults(1)
+        ->getQuery()
+        ->getOneOrNullResult();
     }
 }

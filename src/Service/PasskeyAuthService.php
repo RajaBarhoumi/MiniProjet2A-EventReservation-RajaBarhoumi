@@ -55,9 +55,8 @@ class PasskeyAuthService
         return $options;
     }
 
-    public function verifyRegistration(string $credentialJson, User $user): void
+    public function verifyRegistration(array $credentialJson, User $user): void
     {
-        $credential = json_decode($credentialJson, true);
 
         if (!$credential) {
             throw new \Exception('Invalid credential data');
