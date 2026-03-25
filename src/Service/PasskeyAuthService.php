@@ -58,7 +58,7 @@ class PasskeyAuthService
     public function verifyRegistration(array $credentialJson, User $user): void
     {
 
-        if (empty($credential)) {
+        if (empty($credentialJson)) {
             throw new \Exception('Invalid credential data');
         }
 
