@@ -12,7 +12,8 @@ class RefreshToken extends BaseRefreshToken
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
-    protected int|string|null $id = null; 
+    /** @var int|string|null */
+    protected $id; 
 
     #[ORM\Column(type: 'string', length: 128, unique: true)]
     protected $refreshToken;
@@ -23,9 +24,6 @@ class RefreshToken extends BaseRefreshToken
     #[ORM\Column(type: 'datetime')]
     protected $valid;
 
-    /**
-     * @return int|string|null
-     */
     public function getId(): int|string|null
     {
         return $this->id;
