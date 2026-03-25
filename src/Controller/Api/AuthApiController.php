@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 use App\Repository\UserRepository;
 use App\Service\PasskeyAuthService;
 use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
+use Gesdinet\JWTRefreshTokenBundle\Entity\RefreshToken;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -82,7 +83,8 @@ class AuthApiController extends AbstractController
         try {
             $passkeyService->verifyRegistration($credential, $user);
             $jwt = $this->jwtManager->create($user);
-            $refresh = $this->refreshManager->create();
+            $refresh = new RefreshToken(); 
+            $refresh->setRefreshToken(bin2hex(random_bytes(64)));
             $refresh->setRefreshToken(bin2hex(random_bytes(64)));
             $refresh->setUsername($user->getUserIdentifier());
             $refresh->setValid((new \DateTime())->modify('+2592000 seconds'));
@@ -127,7 +129,8 @@ class AuthApiController extends AbstractController
             $user = $passkeyService->verifyLogin(json_encode($credential));
 
             $jwt = $this->jwtManager->create($user);
-            $refresh = $this->refreshManager->create();
+            $refresh = new RefreshToken(); 
+            $refresh->setRefreshToken(bin2hex(random_bytes(64)));
             $refresh->setRefreshToken(bin2hex(random_bytes(64)));
             $refresh->setUsername($user->getUserIdentifier());
             $refresh->setValid((new \DateTime())->modify('+2592000 seconds'));
