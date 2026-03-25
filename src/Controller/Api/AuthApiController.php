@@ -83,7 +83,7 @@ class AuthApiController extends AbstractController
             $passkeyService->verifyRegistration($credential, $user);
             $jwt = $this->jwtManager->create($user);
             $refresh = $this->refreshManager->create();
-            $refresh->setRefreshToken(); 
+            $refresh->setRefreshToken(bin2hex(random_bytes(64)));
             $refresh->setUsername($user->getUserIdentifier());
             $refresh->setValid((new \DateTime())->modify('+2592000 seconds'));
             $this->refreshManager->save($refresh);
@@ -128,7 +128,7 @@ class AuthApiController extends AbstractController
 
             $jwt = $this->jwtManager->create($user);
             $refresh = $this->refreshManager->create();
-            $refresh->setRefreshToken(); 
+            $refresh->setRefreshToken(bin2hex(random_bytes(64)));
             $refresh->setUsername($user->getUserIdentifier());
             $refresh->setValid((new \DateTime())->modify('+2592000 seconds'));
             $this->refreshManager->save($refresh);
